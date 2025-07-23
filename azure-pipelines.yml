@@ -1,3 +1,6 @@
+trigger:
+  -main
+
 - script: 
     echo "Running basic tests..."
     echo "Test: Checking pipeline functionality"
