@@ -6,7 +6,7 @@ pool:
 
 steps:
 - script: echo "GitHub integration pipeline triggered successfully!"
-  displayName: 'Echo from self-hosted agent'
+  displayName: 'Pipeline Trigger Check'
 
-- script: ./test.sh
+- script: bash test.sh
   displayName: 'Run Build and Test'
