@@ -8,5 +8,5 @@ steps:
 - script: echo "GitHub integration pipeline triggered successfully!"
   displayName: 'Pipeline Trigger Check'
 
-- script: bash test.sh
-  displayName: 'Run Build and Test'
+- script: '"C:\Program Files\Git\bin\bash.exe" test.sh'
+  displayName: 'Run test.sh using Git Bash'
