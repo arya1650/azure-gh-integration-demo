@@ -2,8 +2,8 @@ trigger:
   - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: Default
 
 steps:
-- script: echo Hello from Azure DevOps Pipeline!
-  displayName: 'Print Greeting'
+- script: echo "GitHub integration pipeline triggered successfully!"
+  displayName: 'Echo from self-hosted agent'
