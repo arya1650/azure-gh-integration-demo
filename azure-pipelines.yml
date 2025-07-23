@@ -7,8 +7,9 @@ pool:
 
 steps:
 
-- script: 
+- script: |
     echo "Running basic tests..."
     echo "Test: Checking pipeline functionality"
     echo "Result: Test Passed"
+
   displayName: 'Run Sample Tests'
