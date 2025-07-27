@@ -8,10 +8,10 @@ pool:
 steps:
 
 - script: |
-    echo "Starting fake Java Build"
+    echo Starting fake Java Build
     mkdir build
-    echo "This simulates a .jar file" > build/fake-app.jar
-    echo "Listing contents of build folder"
+    echo This simulates a .jar file > build/fake-app.jar
+    echo Listing contents of build folder
     dir build/
 
   displayName: 'Build fake .jar'
