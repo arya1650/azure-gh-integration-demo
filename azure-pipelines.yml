@@ -2,15 +2,16 @@ trigger:
   - main
 
 pool:
-  name: Default
+  vmImage: ubuntu-latest
 
 
 steps:
 
 - script: |
     echo "Starting fake Java Build"
-    bash build.sh
+    mkdir -p build
+    echo "This simulates a .jar file" > build/fake-app.jar
     echo "Listing contents of build folder"
-    ls -l build/
+    ls build/
 
   displayName: 'Build fake .jar'
