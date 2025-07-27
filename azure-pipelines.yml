@@ -13,6 +13,5 @@ steps:
     echo This simulates a .jar file > build/fake-app.jar
     echo Listing contents of build folder
     dir build/
-
   displayName: 'Build fake .jar'
   shell: cmd
