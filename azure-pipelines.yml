@@ -8,8 +8,9 @@ pool:
 steps:
 
 - script: |
-    echo "Running basic tests..."
-    echo "Test: Checking pipeline functionality"
-    echo "Result: Test Passed"
+    echo "Starting fake Java Build"
+    bash build.sh
+    echo "Listing contents of build folder"
+    ls -l build/
 
-  displayName: 'Run Sample Tests'
+  displayName: 'Build fake .jar'
