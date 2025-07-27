@@ -15,3 +15,4 @@ steps:
     dir build/
 
   displayName: 'Build fake .jar'
+  shell: cmd
