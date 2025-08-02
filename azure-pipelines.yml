@@ -13,6 +13,7 @@ steps:
     outputfile: 'release-notes.md'
     templateLocation: 'InLine'
     template: |
+
       ## Release Notes
 
       ### Linked Work Items
@@ -30,4 +31,3 @@ steps:
     PathtoPublish: 'release-notes.md'
     ArtifactName: 'ReleaseNotes'
     publishLocation: 'Container'
-'
