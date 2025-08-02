@@ -4,14 +4,30 @@ trigger:
 pool:
   name: Default
 
-
 steps:
+- script: echo "This is a sample build step"
+  displayName: 'Build Phase'
 
-  - script: >
-      echo Starting fake Java Build &&
-      mkdir build &&
-      echo This simulates a .jar file > build/fake-app.jar &&
-      echo Listing contents of build folder &&
-      dir build\
+- task: GenerateReleaseNotes@5
+  inputs:
+    outputfile: 'release-notes.md'
+    templateLocation: 'InLine'
+    template: |
+      ## Release Notes
 
-    displayName: 'Build fake .jar'
+      ### Linked Work Items
+      {{#forEach workItems}}
+      - {{this.id}}: {{this.fields['System.Title']}}
+      {{/forEach}}
+
+      ### Commits
+      {{#forEach commits}}
+      - {{this.id}}: {{this.message}}
+      {{/forEach}}
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: 'release-notes.md'
+    ArtifactName: 'ReleaseNotes'
+    publishLocation: 'Container'
+'
