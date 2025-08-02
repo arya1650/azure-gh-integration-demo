@@ -12,6 +12,7 @@ steps:
   inputs:
     outputfile: 'release-notes.md'
     templateLocation: 'InLine'
+    generateForCurrentBuild: true
     template: |
 
       ## 📦 Release Notes
