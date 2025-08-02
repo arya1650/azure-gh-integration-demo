@@ -8,7 +8,7 @@ steps:
 - script: echo "This is a sample build step"
   displayName: 'Build Phase'
 
-- task: XplatGenerateReleaseNotes@5
+- task: XplatGenerateReleaseNotes@4
   inputs:
     outputfile: 'release-notes.md'
     templateLocation: 'InLine'
