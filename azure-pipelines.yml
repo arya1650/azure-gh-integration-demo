@@ -16,15 +16,19 @@ steps:
 
       ## 📦 Release Notes
 
+      {{#if workItems}}
       ### ✅ Linked Work Items
       {{#forEach workItems}}
       - {{this.id}}: {{this.fields['System.Title']}}
       {{/forEach}}
+      {{/if}}
 
+      {{#if commits}}
       ### 🔁 Commits
       {{#forEach commits}}
       - {{this.id}}: {{this.message}}
       {{/forEach}}
+      {{/if}}
 
 - task: PublishBuildArtifacts@1
   inputs:
