@@ -25,6 +25,7 @@ steps:
     echo "Building Docker image..."
     docker build -t $(imageName):$(imageTag) .
   displayName: 'Build Docker Image'
+  workingDirectory: '$(Build.SourcesDirectory)'
 
 #3 Tag Docker image with ACR URL
 - script: |
