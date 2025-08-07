@@ -2,28 +2,58 @@ trigger:
   - main
 
 pool:
-  name: Default
+  name: Default  # This is your self-hosted Windows agent pool
+
+variables:
+  imageName: fake-java-app
+  acrName: fakejavareg26769
+  acrLoginServer: $(acrName).azurecr.io
+  imageTag: latest
 
 steps:
-- script: echo "This is a sample build step"
-  displayName: 'Build Phase'
-
-- task: XplatGenerateReleaseNotes@4
+#1 Login to Azure
+- task: AzureCLI@2
   inputs:
-    outputfile: 'release-notes.md'
-    templateLocation: 'InLine'
-    generateForCurrentBuild: true
-    template: |
+    azureSubscription: 'devops-azure-service-conn'  # Your service connection
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "Logged into Azure CLI"
 
-      ## 📦 Release Notes
+#2 Build Docker image
+- script: |
+    echo "Building Docker image..."
+    docker build -t $(imageName):$(imageTag) .
+  displayName: 'Build Docker Image'
 
-      ### 🔁 Commits
-      {{#forEach commits}}
-      - {{this.id}}: {{this.message}}
-      {{/forEach}}
+#3 Tag Docker image with ACR URL
+- script: |
+    echo "Tagging image for ACR push..."
+    docker tag $(imageName):$(imageTag) $(acrLoginServer)/$(imageName):$(imageTag)
+  displayName: 'Tag Docker Image'
 
-- task: PublishBuildArtifacts@1
+#4 Login to ACR
+- script: |
+    echo "Logging in to ACR..."
+    az acr login --name $(acrName)
+  displayName: 'Login to ACR'
+
+#5 Push image to ACR
+- script: |
+    echo "Pushing image to ACR..."
+    docker push $(acrLoginServer)/$(imageName):$(imageTag)
+  displayName: 'Push Docker Image'
+
+#6 Deploy to AKS
+- task: AzureCLI@2
   inputs:
-    PathtoPublish: 'release-notes.md'
-    ArtifactName: 'ReleaseNotes'
-    publishLocation: 'Container'
+    azureSubscription: 'devops-azure-service-conn'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      echo "⛴️ Setting AKS context..."
+      az aks get-credentials --resource-group myDevOpsRG --name myAKSCluster
+      echo "Applying Kubernetes manifests..."
+      kubectl apply -f deployment.yaml
+      kubectl apply -f service.yaml
+
