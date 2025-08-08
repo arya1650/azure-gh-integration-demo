@@ -18,7 +18,7 @@ steps:
 - task: AzureCLI@2
   inputs:
     azureSubscription: devops-azure-service-conn
-    scriptType: bash
+    scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
       echo "Logging into Azure..."
@@ -28,7 +28,7 @@ steps:
 - task: AzureCLI@2
   inputs:
     azureSubscription: devops-azure-service-conn
-    scriptType: bash
+    scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
       echo "Logging into ACR..."
@@ -50,7 +50,7 @@ steps:
 - task: AzureCLI@2
   inputs:
     azureSubscription: devops-azure-service-conn
-    scriptType: bash
+    scriptType: ps
     scriptLocation: inlineScript
     inlineScript: |
       echo "Setting AKS context..."
