@@ -2,68 +2,65 @@ trigger:
   - main
 
 pool:
-  name: Default  # This is your self-hosted Windows agent pool
+  name: Default  # Your self-hosted agent
 
 variables:
   imageName: fake-java-app
   acrName: fakejavareg26769
   acrLoginServer: $(acrName).azurecr.io
   imageTag: latest
+  resourceGroup: myDevOpsRG
+  aksCluster: myAksCluster
 
 steps:
-#1 Login to Azure
+
+# 1. Login to Azure
 - task: AzureCLI@2
   inputs:
-    azureSubscription: 'devops-azure-service-conn'  # Your service connection
-    scriptType: 'ps'
-    scriptLocation: 'inlineScript'
+    azureSubscription: devops-azure-service-conn
+    scriptType: bash
+    scriptLocation: inlineScript
     inlineScript: |
-      echo "Logged into Azure CLI"
+      echo "Logging into Azure..."
+      az account show
 
-- script: |
-    echo "Current directory:"
-    pwd
-    echo "Files in directory:"
-    dir
-  displayName: 'Verify Current Directory and Files'
-  workingDirectory: '$(Build.SourcesDirectory)'
+# 2. Docker login to ACR
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: devops-azure-service-conn
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      echo "Logging into ACR..."
+      az acr login --name $(acrName)
 
-
-#2 Build Docker image
+# 3. Build Docker image
 - script: |
     echo "Building Docker image..."
-    docker build -t $(imageName):$(imageTag) .
-  displayName: 'Build Docker Image'
-  workingDirectory: '$(Build.SourcesDirectory)'
+    docker build -t $(acrLoginServer)/$(imageName):$(imageTag) .
+  displayName: 'Docker Build'
 
-#3 Tag Docker image with ACR URL
+# 4. Push Docker image to ACR
 - script: |
-    echo "Tagging image for ACR push..."
-    docker tag $(imageName):$(imageTag) $(acrLoginServer)/$(imageName):$(imageTag)
-  displayName: 'Tag Docker Image'
-
-#4 Login to ACR
-- script: |
-    echo "Logging in to ACR..."
-    az acr login --name $(acrName)
-  displayName: 'Login to ACR'
-
-#5 Push image to ACR
-- script: |
-    echo "Pushing image to ACR..."
+    echo "Pushing Docker image to ACR..."
     docker push $(acrLoginServer)/$(imageName):$(imageTag)
-  displayName: 'Push Docker Image'
+  displayName: 'Docker Push'
 
-#6 Deploy to AKS
+# 5. Set AKS context
 - task: AzureCLI@2
   inputs:
-    azureSubscription: 'devops-azure-service-conn'
-    scriptType: 'ps'
-    scriptLocation: 'inlineScript'
+    azureSubscription: devops-azure-service-conn
+    scriptType: bash
+    scriptLocation: inlineScript
     inlineScript: |
       echo "Setting AKS context..."
-      az aks get-credentials --resource-group myDevOpsRG --name myAKSCluster
-      echo "Applying Kubernetes manifests..."
-      kubectl apply -f deployment.yaml
-      kubectl apply -f service.yaml
+      az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+
+# 6. Deploy to AKS using kubectl
+- script: |
+    echo "Deploying to AKS..."
+    kubectl apply -f deployment.yaml
+    kubectl apply -f service.yaml
+    kubectl rollout restart deployment $(imageName)
+  displayName: 'Deploy to AKS'
 
