@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fake-java-svc
+  labels: { app: fake-java-app }
+spec:
+  type: ClusterIP
+  selector: { app: fake-java-app }
+  ports:
+    - port: 80
+      targetPort: 8080
+
