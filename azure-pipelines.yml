@@ -23,24 +23,25 @@ stages:
       displayName: Docker buildx (multi-arch) & push
       inputs:
         azureSubscription: $(serviceConnection)
-        scriptType: bash
+        scriptType: pscore
         scriptLocation: inlineScript
         inlineScript: |
-          set -euo pipefail
+          $ErrorActionPreference = 'Stop'
+
           az acr login -n $(acrName)
 
           # Create/use a Buildx builder (idempotent)
-          docker buildx create --use --name aksbuilder || docker buildx use aksbuilder
+          try { docker buildx create --use --name aksbuilder | Out-Null } catch { docker buildx use aksbuilder }
 
           # Optional: enable emulation for cross-builds (may no-op on some agents)
-          docker run --rm --privileged tonistiigi/binfmt --install all || true
+          try { docker run --rm --privileged tonistiigi/binfmt --install all | Out-Null } catch { Write-Host "binfmt install skipped (optional)" }
 
           # Build and push multi-arch images for all env tags
-          docker buildx build \
-             --platform linux/arm64,linux/amd64 \
-             -t $(acrLoginServer)/$(imageName):dev \
-             -t $(acrLoginServer)/$(imageName):qa  \
-             -t $(acrLoginServer)/$(imageName):prod \
+          docker buildx build `
+             --platform linux/arm64,linux/amd64 `
+             -t $(acrLoginServer)/$(imageName):dev `
+             -t $(acrLoginServer)/$(imageName):qa  `
+             -t $(acrLoginServer)/$(imageName):prod `
              --push .
 
 - stage: Deploy_Dev
@@ -58,15 +59,19 @@ stages:
             displayName: "Get AKS kubecontext"
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: bash
+              scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |
+                $ErrorActionPreference = 'Stop'
                 az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
-          - script: |
-              kubectl apply -k k8s/overlays/dev
-              kubectl rollout status deploy/fake-java-app -n dev
-              kubectl get deploy,svc -n dev
+          - task: PowerShell@2
             displayName: Apply dev
+            inputs:
+              targetType: inline
+              script: |
+                kubectl apply -k k8s/overlays/dev
+                kubectl rollout status deploy/fake-java-app -n dev
+                kubectl get deploy,svc -n dev
 
 - stage: Deploy_QA
   displayName: Deploy to QA
@@ -82,15 +87,19 @@ stages:
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: bash
+              scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |
+                $ErrorActionPreference = 'Stop'
                 az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
-          - script: |
-              kubectl apply -k k8s/overlays/qa
-              kubectl rollout status deploy/fake-java-app -n qa
-              kubectl get deploy,svc -n qa
-            displayName: Apply qa
+          - task: PowerShell@2
+            displayName: Apply dev
+            inputs:
+              targetType: inline
+              script: |
+                kubectl apply -k k8s/overlays/qa
+                kubectl rollout status deploy/fake-java-app -n qa
+                kubectl get deploy,svc -n qa
 
 - stage: Deploy_Prod
   displayName: Deploy to PROD
@@ -106,13 +115,17 @@ stages:
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: bash
+              scriptType: pscore
               scriptLocation: inlineScript
               inlineScript: |
+                $ErrorActionPreference = 'Stop'
                 az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
-          - script: |
-              kubectl apply -k k8s/overlays/prod
-              kubectl rollout status deploy/fake-java-app -n prod
-              kubectl get deploy,svc -n prod
-            displayName: Apply prod
+          - task: PowerShell@2
+            displayName: Apply dev
+            inputs:
+              targetType: inline
+              script: |
+                kubectl apply -k k8s/overlays/prod
+                kubectl rollout status deploy/fake-java-app -n prod
+                kubectl get deploy,svc -n prod
 
