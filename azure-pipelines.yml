@@ -2,65 +2,117 @@ trigger:
   - main
 
 pool:
-  name: Default  # Your self-hosted agent
+  name: Default  # your self-hosted agent
 
 variables:
-  imageName: fake-java-app
   acrName: fakejavareg26769
   acrLoginServer: $(acrName).azurecr.io
-  imageTag: latest
-  resourceGroup: myDevOpsRG
-  aksCluster: myAksCluster
+  imageName: fake-java-app
+  serviceConnection: devops-azure-service-conn
+  aksResourceGroup: myDevOpsRG
+  aksClusterName: myAKSCluster
 
-steps:
+stages:
+- stage: Build
+  displayName: Build & Push Image
+  jobs:
+  - job: build
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      displayName: Docker buildx (multi-arch) & push
+      inputs:
+        azureSubscription: $(serviceConnection)
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          set -euo pipefail
+          az acr login -n $(acrName)
 
-# 1. Login to Azure
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: devops-azure-service-conn
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      echo "Logging into Azure..."
-      az account show
+          # Create/use a Buildx builder (idempotent)
+          docker buildx create --use --name aksbuilder || docker buildx use aksbuilder
 
-# 2. Docker login to ACR
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: devops-azure-service-conn
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      echo "Logging into ACR..."
-      az acr login --name $(acrName)
+          # Optional: enable emulation for cross-builds (may no-op on some agents)
+          docker run --rm --privileged tonistiigi/binfmt --install all || true
 
-# 3. Build Docker image
-- script: |
-    echo "Building Docker image..."
-    docker build -t $(acrLoginServer)/$(imageName):$(imageTag) .
-  displayName: 'Docker Build'
+          # Build and push multi-arch images for all env tags
+          docker buildx build \
+             --platform linux/arm64,linux/amd64 \
+             -t $(acrLoginServer)/$(imageName):dev \
+             -t $(acrLoginServer)/$(imageName):qa  \
+             -t $(acrLoginServer)/$(imageName):prod \
+             --push .
 
-# 4. Push Docker image to ACR
-- script: |
-    echo "Pushing Docker image to ACR..."
-    docker push $(acrLoginServer)/$(imageName):$(imageTag)
-  displayName: 'Docker Push'
+- stage: Deploy_Dev
+  displayName: Deploy to DEV
+  dependsOn: Build
+  jobs:
+  - deployment: dev
+    environment: aks-dev
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: "Get AKS kubecontext"
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
+          - script: |
+              kubectl apply -k k8s/overlays/dev
+              kubectl rollout status deploy/fake-java-app -n dev
+              kubectl get deploy,svc -n dev
+            displayName: Apply dev
 
-# 5. Set AKS context
-- task: AzureCLI@2
-  inputs:
-    azureSubscription: devops-azure-service-conn
-    scriptType: ps
-    scriptLocation: inlineScript
-    inlineScript: |
-      echo "Setting AKS context..."
-      az aks get-credentials --resource-group $(resourceGroup) --name $(aksCluster) --overwrite-existing
+- stage: Deploy_QA
+  displayName: Deploy to QA
+  dependsOn: Deploy_Dev
+  jobs:
+  - deployment: qa
+    environment: aks-qa   # add approvals in Environments
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
+          - script: |
+              kubectl apply -k k8s/overlays/qa
+              kubectl rollout status deploy/fake-java-app -n qa
+              kubectl get deploy,svc -n qa
+            displayName: Apply qa
 
-# 6. Deploy to AKS using kubectl
-- script: |
-    echo "Deploying to AKS..."
-    kubectl apply -f deployment.yaml
-    kubectl apply -f service.yaml
-    kubectl rollout restart deployment $(imageName)
-  displayName: 'Deploy to AKS'
+- stage: Deploy_Prod
+  displayName: Deploy to PROD
+  dependsOn: Deploy_QA
+  jobs:
+  - deployment: prod
+    environment: aks-prod  # add approvals in Environments
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: $(serviceConnection)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az aks get-credentials -g $(aksResourceGroup) -n $(aksClusterName) --overwrite-existing
+          - script: |
+              kubectl apply -k k8s/overlays/prod
+              kubectl rollout status deploy/fake-java-app -n prod
+              kubectl get deploy,svc -n prod
+            displayName: Apply prod
 
