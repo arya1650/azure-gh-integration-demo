@@ -23,7 +23,7 @@ stages:
       displayName: Docker buildx (multi-arch) & push
       inputs:
         azureSubscription: $(serviceConnection)
-        scriptType: pscore
+        scriptType: ps
         scriptLocation: inlineScript
         inlineScript: |
           $ErrorActionPreference = 'Stop'
@@ -59,7 +59,7 @@ stages:
             displayName: "Get AKS kubecontext"
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: pscore
+              scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
                 $ErrorActionPreference = 'Stop'
@@ -87,7 +87,7 @@ stages:
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: pscore
+              scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
                 $ErrorActionPreference = 'Stop'
@@ -115,7 +115,7 @@ stages:
           - task: AzureCLI@2
             inputs:
               azureSubscription: $(serviceConnection)
-              scriptType: pscore
+              scriptType: ps
               scriptLocation: inlineScript
               inlineScript: |
                 $ErrorActionPreference = 'Stop'
